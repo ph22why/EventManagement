@@ -1,0 +1,12 @@
+# Node modules
+node_modules/
+
+# 빌드 결과물
+build/
+dist/
+
+# 환경 변수 파일 (필요시)
+.env
+
+# Docker 관련 로그 파일 등
+docker-compose.override.yml

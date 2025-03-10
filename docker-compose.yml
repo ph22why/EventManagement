@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: AWANAKOREA353
+      MYSQL_DATABASE: test
+      MYSQL_USER: awana
+      MYSQL_PASSWORD: AWANAKOREA353
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: always
+    environment:
+      DB_HOST: mysql
+      DB_USER: awana
+      DB_PASSWORD: AWANAKOREA353
+      DB_NAME: test
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mysql
+
+  frontend:
+    build: ./frontend
+    volumes:
+      - ./frontend/src:/app/src
+    container_name: frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  mysql-data:
