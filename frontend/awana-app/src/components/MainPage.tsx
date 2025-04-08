@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventApi } from '../services/api';
-import backgroundImage from '../assets/gradient-background.png';  // 이미지 import
+import backgroundImage from '../assets/gradient-background.png';
 
 interface Event {
-  id: number;
+  event_ID: number;
   event_Name: string;
-  event_Date: string;
   event_Location: string;
-  event_Description: string;
-  event_Status: string;
+  event_Year: number;
+  event_Date: Date;
+  event_Open_Available: boolean;
+  event_Place: string;
 }
 
 const allEvents = [
@@ -137,7 +138,7 @@ const MainPage: React.FC = () => {
                   return (
                     <div
                       key={index}
-                      onClick={() => registeredEvent && handleEventClick(registeredEvent.id)}
+                      onClick={() => registeredEvent && handleEventClick(registeredEvent.event_ID)}
                       className={`bg-gray-50/90 backdrop-blur-sm rounded-lg p-4 transform transition-all duration-300 hover:scale-[1.02] hover:bg-gray-100/90 ${
                         registeredEvent ? 'cursor-pointer' : 'cursor-default'
                       }`}
@@ -148,12 +149,8 @@ const MainPage: React.FC = () => {
                             <h2 className="text-xl font-semibold text-gray-900">{event.name}</h2>
                             {registeredEvent ? (
                               <span className={`px-3 py-1 rounded-full text-xs font-medium
-                                ${registeredEvent.event_Status === 'open' ? 'bg-green-100 text-green-800' : 
-                                  registeredEvent.event_Status === 'closed' ? 'bg-red-100 text-red-800' : 
-                                  'bg-yellow-100 text-yellow-800'}`}>
-                                {registeredEvent.event_Status === 'open' ? '신청 가능' : 
-                                 registeredEvent.event_Status === 'closed' ? '마감' : 
-                                 '준비 중'}
+                                ${registeredEvent.event_Open_Available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                {registeredEvent.event_Open_Available ? '신청 가능' : '마감'}
                               </span>
                             ) : (
                               <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">

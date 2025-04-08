@@ -4,7 +4,7 @@
   "description": "AWANA Events Backend",
   "main": "src/app.ts",
   "scripts": {
-    "start": "node dist/app.js",
+    "start": "ts-node src/app.ts",
     "dev": "nodemon src/app.ts",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
