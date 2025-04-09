@@ -74,8 +74,7 @@ export const getEventById = async (req: Request, res: Response) => {
   }
 };
 
-// 새 이벤트 생성 
-// test
+// 새 이벤트 생성
 export const createEvent = async (req: Request, res: Response) => {
   try {
     const { event_Name, event_Date, event_Location, event_Description } = req.body;
