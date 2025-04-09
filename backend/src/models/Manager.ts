@@ -1,21 +1,30 @@
-import { Model, DataTypes } from 'sequelize';
-import sequelize from '../config/database';
+import { Model, DataTypes, Optional } from 'sequelize';
+import sequelize from '../config/sequelize';
 
-class Manager extends Model {
+export interface ManagerAttributes {
+  manager_ID: number;
+  manager_Name: string;
+  manager_Phone: string;
+  manager_Email: string;
+  manager_Password: string;
+}
+
+export interface ManagerCreationAttributes extends Optional<ManagerAttributes, 'manager_ID'> {}
+
+class ManagerModel extends Model<ManagerAttributes, ManagerCreationAttributes> implements ManagerAttributes {
   public manager_ID!: number;
   public manager_Name!: string;
   public manager_Phone!: string;
-  public manager_Mail!: string;
-  public manager_Bank!: string;
-  public manager_Account!: string;
+  public manager_Email!: string;
+  public manager_Password!: string;
 }
 
-Manager.init(
+ManagerModel.init(
   {
     manager_ID: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
       primaryKey: true,
+      autoIncrement: true,
     },
     manager_Name: {
       type: DataTypes.STRING,
@@ -24,26 +33,24 @@ Manager.init(
     manager_Phone: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
-    manager_Mail: {
+    manager_Email: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
+      unique: true,
     },
-    manager_Bank: {
+    manager_Password: {
       type: DataTypes.STRING,
-      allowNull: true,
-    },
-    manager_Account: {
-      type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
     },
   },
   {
     sequelize,
     modelName: 'Manager',
-    tableName: 'ManagerDB',
+    tableName: 'managers',
     timestamps: false,
   }
 );
 
-export default Manager; 
+export default ManagerModel; 

@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import EventChurch from '../models/EventChurch';
-import Event from '../models/Event';
-import Church from '../models/Church';
+import { Event, Church, Manager, EventChurch, EventChurchMember } from '../models';
+import { Op } from 'sequelize';
 
 interface EventChurchData {
   id: number;
@@ -22,102 +21,208 @@ interface EventChurchData {
   };
 }
 
+interface ReceiptInput {
+  event_ID: number;
+  church_reg_ID: string;
+  member_Name: string;
+  member_Phone: string;
+  member_Type: string;
+  member_Status: string;
+}
+
 // 모든 영수증 조회
 export const getAllReceipts = async (req: Request, res: Response) => {
   try {
-    const receipts = await EventChurch.findAll({
+    const receipts = await EventChurchMember.findAll({
       include: [
-        { model: Event, attributes: ['event_Name'] },
-        { model: Church, attributes: ['church_Name', 'church_reg_ID'] }
-      ],
-      order: [['id', 'DESC']]
+        {
+          model: EventChurch,
+          include: [
+            {
+              model: Event
+            },
+            {
+              model: Church
+            },
+            {
+              model: Manager
+            }
+          ]
+        }
+      ]
     });
-
-    const formattedReceipts = receipts.map((receipt: EventChurchData) => ({
-      id: receipt.id,
-      eventId: receipt.event_ID,
-      eventName: receipt.Event?.event_Name,
-      churchId: receipt.church_ID,
-      churchName: receipt.Church?.church_Name,
-      registrationNumber: receipt.Church?.church_reg_ID,
-      partTotal: receipt.part_total,
-      partStudent: receipt.part_student,
-      partTeacher: receipt.part_teacher,
-      partYm: receipt.part_ym,
-      costs: receipt.costs,
-      createdAt: new Date().toISOString()
-    }));
-
-    res.json(formattedReceipts);
+    return res.status(200).json(receipts);
   } catch (error) {
-    console.error('Error fetching receipts:', error);
-    res.status(500).json({ message: '영수증 목록을 가져오는데 실패했습니다.' });
+    console.error('영수증 조회 중 오류 발생:', error);
+    return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
   }
 };
 
 // 특정 영수증 조회
 export const getReceiptById = async (req: Request, res: Response) => {
   try {
-    const receipt = await EventChurch.findByPk(req.params.id, {
+    const { id } = req.params;
+    const receipt = await EventChurchMember.findByPk(id, {
       include: [
-        { model: Event, attributes: ['event_Name'] },
-        { model: Church, attributes: ['church_Name', 'church_reg_ID'] }
+        {
+          model: EventChurch,
+          include: [
+            {
+              model: Event
+            },
+            {
+              model: Church
+            },
+            {
+              model: Manager
+            }
+          ]
+        }
       ]
     });
-
+    
     if (!receipt) {
       return res.status(404).json({ message: '영수증을 찾을 수 없습니다.' });
     }
-
-    const formattedReceipt = {
-      id: receipt.id,
-      eventId: receipt.event_ID,
-      eventName: receipt.Event?.event_Name,
-      churchId: receipt.church_ID,
-      churchName: receipt.Church?.church_Name,
-      registrationNumber: receipt.Church?.church_reg_ID,
-      partTotal: receipt.part_total,
-      partStudent: receipt.part_student,
-      partTeacher: receipt.part_teacher,
-      partYm: receipt.part_ym,
-      costs: receipt.costs,
-      createdAt: new Date().toISOString()
-    };
-
-    res.json(formattedReceipt);
+    
+    return res.status(200).json(receipt);
   } catch (error) {
-    console.error('Error fetching receipt:', error);
-    res.status(500).json({ message: '영수증을 가져오는데 실패했습니다.' });
+    console.error('영수증 조회 중 오류 발생:', error);
+    return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+  }
+};
+
+// 새 영수증 생성
+export const createReceipt = async (req: Request, res: Response) => {
+  try {
+    const receiptData: ReceiptInput = req.body;
+    
+    // 이벤트-교회 관계 확인
+    const eventChurch = await EventChurch.findOne({
+      where: {
+        event_ID: receiptData.event_ID,
+        '$church.church_reg_ID$': receiptData.church_reg_ID
+      },
+      include: [{
+        model: Church,
+        as: 'church'
+      }]
+    });
+
+    if (!eventChurch) {
+      return res.status(404).json({ message: 'Event-Church relationship not found' });
+    }
+
+    // 영수증 생성
+    const receipt = await EventChurchMember.create({
+      event_church_id: (eventChurch as any).event_church_id,
+      member_Name: receiptData.member_Name,
+      member_Phone: receiptData.member_Phone,
+      member_Type: receiptData.member_Type,
+      member_Status: receiptData.member_Status
+    } as any);
+
+    res.status(201).json(receipt);
+  } catch (error) {
+    console.error('Error creating receipt:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
 // 영수증 업데이트
 export const updateReceipt = async (req: Request, res: Response) => {
   try {
-    const receipt = await EventChurch.findByPk(req.params.id);
+    const { id } = req.params;
+    const { member_Name, member_Phone, member_Type, member_Status } = req.body;
+    
+    const receipt = await EventChurchMember.findByPk(id);
+    
     if (!receipt) {
       return res.status(404).json({ message: '영수증을 찾을 수 없습니다.' });
     }
-
-    const {
-      part_total,
-      part_student,
-      part_teacher,
-      part_ym,
-      costs
-    } = req.body;
-
+    
     await receipt.update({
-      part_total,
-      part_student,
-      part_teacher,
-      part_ym,
-      costs
+      member_Name,
+      member_Phone,
+      member_Type,
+      member_Status
     });
-
-    res.json({ message: '영수증이 업데이트되었습니다.' });
+    
+    return res.status(200).json(receipt);
   } catch (error) {
-    console.error('Error updating receipt:', error);
-    res.status(500).json({ message: '영수증 업데이트에 실패했습니다.' });
+    console.error('영수증 업데이트 중 오류 발생:', error);
+    return res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+  }
+};
+
+export const getReceiptsByEvent = async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const receipts = await EventChurchMember.findAll({
+      include: [{
+        model: EventChurch,
+        where: { event_ID: eventId },
+        include: [{
+          model: Church,
+          as: 'church'
+        }]
+      }]
+    });
+    res.json(receipts);
+  } catch (error) {
+    console.error('Error getting receipts by event:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const getReceiptsByChurch = async (req: Request, res: Response) => {
+  try {
+    const { churchId } = req.params;
+    const receipts = await EventChurchMember.findAll({
+      include: [{
+        model: EventChurch,
+        where: { '$church.church_reg_ID$': churchId },
+        include: [{
+          model: Church,
+          as: 'church'
+        }]
+      }]
+    });
+    res.json(receipts);
+  } catch (error) {
+    console.error('Error getting receipts by church:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+export const updateReceiptStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const receipt = await EventChurchMember.findByPk(id);
+    if (!receipt) {
+      return res.status(404).json({ message: 'Receipt not found' });
+    }
+    await receipt.update({ member_Status: status });
+    res.json(receipt);
+  } catch (error) {
+    console.error('Error updating receipt status:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// 영수증 삭제
+export const deleteReceipt = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const receipt = await EventChurchMember.findByPk(id);
+    if (!receipt) {
+      return res.status(404).json({ message: 'Receipt not found' });
+    }
+    await receipt.destroy();
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting receipt:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 }; 

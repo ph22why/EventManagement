@@ -9,7 +9,9 @@
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
   },
   "dependencies": {
+    "@types/sequelize": "^4.28.20",
     "axios": "^1.8.4",
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "sequelize": "^6.37.7"
   }
 }
