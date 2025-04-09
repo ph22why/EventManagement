@@ -1,38 +1,36 @@
-import { Model, DataTypes } from 'sequelize';
-import sequelize from '../config/database';
-import Event from './Event';
-import Church from './Church';
-import Manager from './Manager';
+import { Model, DataTypes, Optional } from 'sequelize';
+import sequelize from '../config/sequelize';
+import ChurchModel from './Church';
+import EventModel from './Event';
 
-class EventChurch extends Model {
-  public id!: number;
+export interface EventChurchAttributes {
+  event_church_id: number;
+  event_ID: number;
+  church_ID: number;
+  manager_ID: number;
+}
+
+export interface EventChurchCreationAttributes extends Optional<EventChurchAttributes, 'event_church_id'> {}
+
+class EventChurchModel extends Model<EventChurchAttributes, EventChurchCreationAttributes> implements EventChurchAttributes {
+  public event_church_id!: number;
   public event_ID!: number;
   public church_ID!: number;
   public manager_ID!: number;
-  public part_total!: number;
-  public part_student!: number;
-  public part_teacher!: number;
-  public part_ym!: number;
-  public costs!: number;
-  
-  // 관계 정의
-  public readonly Event?: Event;
-  public readonly Church?: Church;
-  public readonly Manager?: Manager;
 }
 
-EventChurch.init(
+EventChurchModel.init(
   {
-    id: {
+    event_church_id: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
       primaryKey: true,
+      autoIncrement: true,
     },
     event_ID: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: Event,
+        model: EventModel,
         key: 'event_ID',
       },
     },
@@ -40,55 +38,25 @@ EventChurch.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: Church,
+        model: ChurchModel,
         key: 'church_ID',
       },
     },
     manager_ID: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: Manager,
-        key: 'manager_ID',
-      },
-    },
-    part_total: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    },
-    part_student: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    },
-    part_teacher: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    },
-    part_ym: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-    },
-    costs: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
     },
   },
   {
     sequelize,
     modelName: 'EventChurch',
-    tableName: 'Event-ChurchDB',
+    tableName: 'event_churches',
     timestamps: false,
   }
 );
 
-// 관계 설정
-EventChurch.belongsTo(Event, { foreignKey: 'event_ID' });
-EventChurch.belongsTo(Church, { foreignKey: 'church_ID' });
-EventChurch.belongsTo(Manager, { foreignKey: 'manager_ID' });
+// 모델 간 관계 설정
+EventChurchModel.belongsTo(ChurchModel, { foreignKey: 'church_ID' });
+EventChurchModel.belongsTo(EventModel, { foreignKey: 'event_ID' });
 
-export default EventChurch; 
+export default EventChurchModel; 

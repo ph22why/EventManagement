@@ -1,29 +1,40 @@
-import { Model, DataTypes } from 'sequelize';
-import sequelize from '../config/database';
+import { Model, DataTypes, Optional } from 'sequelize';
+import sequelize from '../config/sequelize';
 
-class Church extends Model {
+export interface ChurchAttributes {
+  church_ID: number;
+  church_reg_ID: string;
+  church_sub_ID: string;
+  church_Name: string;
+  church_Location: string;
+  church_Phone?: string;
+}
+
+export interface ChurchCreationAttributes extends Optional<ChurchAttributes, 'church_ID'> {}
+
+class ChurchModel extends Model<ChurchAttributes, ChurchCreationAttributes> implements ChurchAttributes {
   public church_ID!: number;
   public church_reg_ID!: string;
   public church_sub_ID!: string;
   public church_Name!: string;
   public church_Location!: string;
+  public church_Phone?: string;
 }
 
-Church.init(
+ChurchModel.init(
   {
     church_ID: {
       type: DataTypes.INTEGER,
-      autoIncrement: true,
       primaryKey: true,
+      autoIncrement: true,
     },
     church_reg_ID: {
-      type: DataTypes.STRING(3),
+      type: DataTypes.STRING,
       allowNull: false,
     },
     church_sub_ID: {
-      type: DataTypes.STRING(1),
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'a',
     },
     church_Name: {
       type: DataTypes.STRING,
@@ -33,13 +44,17 @@ Church.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    church_Phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
     sequelize,
     modelName: 'Church',
-    tableName: 'ChurchDB',
+    tableName: 'churches',
     timestamps: false,
   }
 );
 
-export default Church; 
+export default ChurchModel; 

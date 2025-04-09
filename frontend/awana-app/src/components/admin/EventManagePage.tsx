@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import backgroundImage from '../../../assets/gradient-background.png';
-import { eventApi } from '../../../services/api';
+import backgroundImage from '../../assets/gradient-background.png';
+import { eventApi } from '../../services/api';
 
 interface Event {
   event_ID: number;
@@ -12,16 +12,10 @@ interface Event {
   event_Place: string;
   event_Participants: string;
   event_Open_Available: boolean;
-  event_Date: string;
-  event_Year: number;
-  event_Location: string;
 }
 
-interface EventFormData {
-  event_Location: string;
-  event_Date: string;
-  event_Place: string;
-  event_Open_Available: boolean;
+interface ApiResponse {
+  data: Event[];
 }
 
 const defaultEvents = [
@@ -47,15 +41,18 @@ const defaultEvents = [
 const EventManagePage: React.FC = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [selectedEventName, setSelectedEventName] = useState('');
-  const [newEventData, setNewEventData] = useState<EventFormData>({
-    event_Location: '',
-    event_Date: '',
+  const [newEventData, setNewEventData] = useState<Partial<Event>>({
+    event_Description: '',
+    event_Period: '',
+    event_Region: '',
     event_Place: '',
+    event_Participants: '',
     event_Open_Available: true
   });
 
@@ -66,12 +63,8 @@ const EventManagePage: React.FC = () => {
   const fetchEvents = async () => {
     try {
       const response = await eventApi.getAllEvents();
-      console.log('Fetched events:', response.data);
-      const eventsWithDates = response.data.map((event: Event) => ({
-        ...event,
-        event_Date: new Date(event.event_Date)
-      }));
-      setEvents(eventsWithDates);
+      const eventData = Array.isArray(response.data) ? response.data : response.data.data;
+      setEvents(eventData);
       setIsLoading(false);
     } catch (err) {
       console.error('Error fetching events:', err);
@@ -84,20 +77,18 @@ const EventManagePage: React.FC = () => {
     try {
       const eventData = {
         event_Name: selectedEventName,
-        event_Year: selectedYear,
-        event_Location: newEventData.event_Location,
-        event_Date: new Date(newEventData.event_Date),
-        event_Place: newEventData.event_Place,
-        event_Open_Available: newEventData.event_Open_Available
+        ...newEventData
       };
       
       await eventApi.createEvent(eventData);
       setShowAddEventModal(false);
       setSelectedEventName('');
       setNewEventData({
-        event_Location: '',
-        event_Date: '',
+        event_Description: '',
+        event_Period: '',
+        event_Region: '',
         event_Place: '',
+        event_Participants: '',
         event_Open_Available: true
       });
       fetchEvents();
@@ -121,36 +112,23 @@ const EventManagePage: React.FC = () => {
   };
 
   const handleDeleteEvent = async (eventId: number) => {
-    if (window.confirm('정말로 이 이벤트를 삭제하시겠습니까?')) {
-      try {
-        await eventApi.deleteEvent(eventId);
-        fetchEvents();
-      } catch (err) {
-        console.error('Error deleting event:', err);
-        setError('이벤트 삭제에 실패했습니다.');
-      }
+    if (!window.confirm('정말로 이 이벤트를 삭제하시겠습니까?')) {
+      return;
+    }
+
+    try {
+      await eventApi.deleteEvent(eventId);
+      fetchEvents();
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      setError('이벤트 삭제에 실패했습니다.');
     }
   };
 
   const getAvailableEventNames = () => {
-    const existingEvents = events
-      .filter(event => event.event_Year === selectedYear)
-      .map(event => event.event_Name);
+    const existingEvents = events.map(event => event.event_Name);
     return defaultEvents.filter(name => !existingEvents.includes(name));
   };
-
-  const years = Array.from(
-    new Set(events.map(event => event.event_Year))
-  ).sort((a, b) => b - a);
-
-  if (!years.includes(selectedYear)) {
-    years.push(selectedYear);
-    years.sort((a, b) => b - a);
-  }
-
-  const filteredEvents = events
-    .filter(event => event.event_Year === selectedYear)
-    .sort((a, b) => a.event_Name.localeCompare(b.event_Name));
 
   if (isLoading) {
     return <div className="p-4">로딩 중...</div>;
@@ -177,7 +155,7 @@ const EventManagePage: React.FC = () => {
               <h1 className="text-3xl font-bold text-gray-900">이벤트 관리</h1>
               <div className="space-x-4">
                 <button
-                  onClick={() => navigate('/admin/events/create')}
+                  onClick={() => setShowAddEventModal(true)}
                   className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 ease-in-out transform hover:scale-105"
                 >
                   이벤트 생성
@@ -197,28 +175,6 @@ const EventManagePage: React.FC = () => {
               </div>
             )}
 
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex gap-4">
-                <select
-                  className="border rounded px-3 py-2"
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  aria-label="연도 선택"
-                >
-                  {years.map(year => (
-                    <option key={year} value={year}>{year}년</option>
-                  ))}
-                  <option value={Math.max(...years) + 1}>{Math.max(...years) + 1}년</option>
-                </select>
-                <button
-                  onClick={() => setShowAddEventModal(true)}
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
-                  새 이벤트 추가
-                </button>
-              </div>
-            </div>
-
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -227,10 +183,19 @@ const EventManagePage: React.FC = () => {
                       이벤트명
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      설명
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      기간
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      지역
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       장소
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      날짜
+                      참가자/비용
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       상태
@@ -241,18 +206,25 @@ const EventManagePage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredEvents.map((event, index) => (
-                    <tr key={`${event.event_ID}-${event.event_Year}-${index}`} className="hover:bg-gray-50">
+                  {events.map((event) => (
+                    <tr key={`event-${event.event_ID}`} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{event.event_Name}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{event.event_Location}</div>
+                        <div className="text-sm text-gray-900">{event.event_Description}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {new Date(event.event_Date).toLocaleDateString()}
-                        </div>
+                        <div className="text-sm text-gray-900">{event.event_Period}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{event.event_Region}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">{event.event_Place}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">{event.event_Participants}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -315,35 +287,58 @@ const EventManagePage: React.FC = () => {
                 </select>
               </div>
               <div>
-                <label htmlFor="event-location" className="block text-sm font-medium text-gray-700">장소</label>
-                <input
-                  id="event-location"
-                  type="text"
+                <label htmlFor="event-description" className="block text-sm font-medium text-gray-700">설명</label>
+                <textarea
+                  id="event-description"
                   className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                  value={newEventData.event_Location}
-                  onChange={(e) => setNewEventData({...newEventData, event_Location: e.target.value})}
-                  placeholder="장소를 입력하세요"
+                  value={newEventData.event_Description}
+                  onChange={(e) => setNewEventData({...newEventData, event_Description: e.target.value})}
+                  placeholder="이벤트 설명을 입력하세요"
+                  rows={3}
                 />
               </div>
               <div>
-                <label htmlFor="event-place" className="block text-sm font-medium text-gray-700">상세 장소</label>
+                <label htmlFor="event-period" className="block text-sm font-medium text-gray-700">기간</label>
+                <input
+                  id="event-period"
+                  type="text"
+                  className="mt-1 block w-full border rounded-md shadow-sm p-2"
+                  value={newEventData.event_Period}
+                  onChange={(e) => setNewEventData({...newEventData, event_Period: e.target.value})}
+                  placeholder="이벤트 기간을 입력하세요"
+                />
+              </div>
+              <div>
+                <label htmlFor="event-region" className="block text-sm font-medium text-gray-700">지역</label>
+                <input
+                  id="event-region"
+                  type="text"
+                  className="mt-1 block w-full border rounded-md shadow-sm p-2"
+                  value={newEventData.event_Region}
+                  onChange={(e) => setNewEventData({...newEventData, event_Region: e.target.value})}
+                  placeholder="지역을 입력하세요"
+                />
+              </div>
+              <div>
+                <label htmlFor="event-place" className="block text-sm font-medium text-gray-700">장소</label>
                 <input
                   id="event-place"
                   type="text"
                   className="mt-1 block w-full border rounded-md shadow-sm p-2"
                   value={newEventData.event_Place}
                   onChange={(e) => setNewEventData({...newEventData, event_Place: e.target.value})}
-                  placeholder="상세 장소를 입력하세요"
+                  placeholder="장소를 입력하세요"
                 />
               </div>
               <div>
-                <label htmlFor="event-date" className="block text-sm font-medium text-gray-700">날짜</label>
+                <label htmlFor="event-participants" className="block text-sm font-medium text-gray-700">참가자/비용</label>
                 <input
-                  id="event-date"
-                  type="date"
+                  id="event-participants"
+                  type="text"
                   className="mt-1 block w-full border rounded-md shadow-sm p-2"
-                  value={newEventData.event_Date}
-                  onChange={(e) => setNewEventData({...newEventData, event_Date: e.target.value})}
+                  value={newEventData.event_Participants}
+                  onChange={(e) => setNewEventData({...newEventData, event_Participants: e.target.value})}
+                  placeholder="참가자 정보 또는 비용을 입력하세요"
                 />
               </div>
               <div className="flex items-center">
@@ -367,7 +362,7 @@ const EventManagePage: React.FC = () => {
               <button
                 onClick={handleAddEvent}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                disabled={!selectedEventName || !newEventData.event_Location || !newEventData.event_Date || !newEventData.event_Place}
+                disabled={!selectedEventName}
               >
                 추가
               </button>
