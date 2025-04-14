@@ -1,96 +1,90 @@
 import express from 'express';
-import pool from '../config/database';
+import pool from '../db';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { Request, Response } from 'express';
 
 const router = express.Router();
 
-// 모든 이벤트 조회
+// Get all events
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM EventDB');
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM eventdb');
     res.json(rows);
   } catch (error) {
     console.error('Error fetching events:', error);
-    res.status(500).json({ error: '이벤트 목록을 불러오는데 실패했습니다.' });
+    res.status(500).json({ error: 'Failed to fetch events' });
   }
 });
 
-// 특정 이벤트 조회
+// Get sample events
+router.get('/sampleEvents', async (req, res) => {
+  try {
+    // console.log('Fetching sample events...');
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM sampleeventdb');
+    // console.log('Sample events fetched:', rows);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching sample events:', error);
+    res.status(500).json({ error: 'Failed to fetch sample events' });
+  }
+});
+
+// Get event by ID
 router.get('/:id', async (req, res) => {
   try {
-    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM EventDB WHERE event_ID = ?', [req.params.id]);
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM eventdb WHERE event_ID = ?', [req.params.id]);
     if (rows.length === 0) {
-      return res.status(404).json({ error: '이벤트를 찾을 수 없습니다.' });
+      return res.status(404).json({ error: 'Event not found' });
     }
     res.json(rows[0]);
   } catch (error) {
     console.error('Error fetching event:', error);
-    res.status(500).json({ error: '이벤트 정보를 불러오는데 실패했습니다.' });
+    res.status(500).json({ error: 'Failed to fetch event' });
   }
 });
 
-// 새 이벤트 생성
+// Create new event
 router.post('/', async (req, res) => {
   try {
-    const { event_Name, event_Description, event_Period, event_Region, event_Place, event_Participants, event_Open_Available } = req.body;
+    const { event_Name, event_Location, event_Year, event_Start_Date, event_End_Date, event_Registration_Start_Date, event_Registration_End_Date, event_Open_Available, event_Place, event_Month, event_Description } = req.body;
     
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO EventDB (event_Name, event_Description, event_Period, event_Region, event_Place, event_Participants, event_Open_Available) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [event_Name, event_Description, event_Period, event_Region, event_Place, event_Participants, event_Open_Available]
+      'INSERT INTO eventdb (event_Name, event_Location, event_Year, event_Start_Date, event_End_Date, event_Registration_Start_Date, event_Registration_End_Date, event_Open_Available, event_Place, event_Month, event_Description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [event_Name, event_Location, event_Year, event_Start_Date, event_End_Date, event_Registration_Start_Date, event_Registration_End_Date, event_Open_Available, event_Place, event_Month, event_Description]
     );
-
-    const newEvent = {
-      event_ID: result.insertId,
-      event_Name,
-      event_Description,
-      event_Period,
-      event_Region,
-      event_Place,
-      event_Participants,
-      event_Open_Available
-    };
-
-    res.status(201).json(newEvent);
+    
+    res.status(201).json({ id: result.insertId, ...req.body });
   } catch (error) {
     console.error('Error creating event:', error);
-    res.status(500).json({ error: '이벤트 생성에 실패했습니다.' });
+    res.status(500).json({ error: 'Failed to create event' });
   }
 });
 
-// 이벤트 수정
+// Update event
 router.put('/:id', async (req, res) => {
   try {
-    const { event_Name, event_Description, event_Period, event_Region, event_Place, event_Participants, event_Open_Available } = req.body;
+    const { event_Name, event_Location, event_Year, event_Start_Date, event_End_Date, event_Registration_Start_Date, event_Registration_End_Date, event_Open_Available, event_Place, event_Month, event_Description } = req.body;
     
-    const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE EventDB SET event_Name = ?, event_Description = ?, event_Period = ?, event_Region = ?, event_Place = ?, event_Participants = ?, event_Open_Available = ? WHERE event_ID = ?',
-      [event_Name, event_Description, event_Period, event_Region, event_Place, event_Participants, event_Open_Available, req.params.id]
+    await pool.query<ResultSetHeader>(
+      'UPDATE eventdb SET event_Name = ?, event_Location = ?, event_Year = ?, event_Start_Date = ?, event_End_Date = ?, event_Registration_Start_Date = ?, event_Registration_End_Date = ?, event_Open_Available = ?, event_Place = ?, event_Month = ?, event_Description = ? WHERE event_ID = ?',
+      [event_Name, event_Location, event_Year, event_Start_Date, event_End_Date, event_Registration_Start_Date, event_Registration_End_Date, event_Open_Available, event_Place, event_Month, event_Description, req.params.id]
     );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: '이벤트를 찾을 수 없습니다.' });
-    }
-
-    res.json({ message: '이벤트가 성공적으로 수정되었습니다.' });
+    
+    res.json({ id: req.params.id, ...req.body });
   } catch (error) {
     console.error('Error updating event:', error);
-    res.status(500).json({ error: '이벤트 수정에 실패했습니다.' });
+    res.status(500).json({ error: 'Failed to update event' });
   }
 });
 
-// 이벤트 삭제
+// Delete event
 router.delete('/:id', async (req, res) => {
   try {
-    const [result] = await pool.query<ResultSetHeader>('DELETE FROM EventDB WHERE event_ID = ?', [req.params.id]);
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: '이벤트를 찾을 수 없습니다.' });
-    }
-
-    res.json({ message: '이벤트가 성공적으로 삭제되었습니다.' });
+    await pool.query<ResultSetHeader>('DELETE FROM eventdb WHERE event_ID = ?', [req.params.id]);
+    res.json({ message: 'Event deleted successfully' });
   } catch (error) {
     console.error('Error deleting event:', error);
-    res.status(500).json({ error: '이벤트 삭제에 실패했습니다.' });
+    res.status(500).json({ error: 'Failed to delete event' });
   }
 });
 

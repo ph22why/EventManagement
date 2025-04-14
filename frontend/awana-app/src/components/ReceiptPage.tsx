@@ -4,6 +4,7 @@ import { eventApi, churchApi } from '../services/api';
 import backgroundImage from '../assets/gradient-background.png';
 import type { Church } from '../types/church';
 import type { Event } from '../types/event';
+import moment from 'moment';
 
 const ReceiptPage: React.FC = () => {
   // 상태 관리
@@ -40,48 +41,16 @@ const ReceiptPage: React.FC = () => {
 
   // 년도별 이벤트 필터링
   const filteredEvents = events.filter(event => {
-    if (!event.event_Date) return false;
-    
-    try {
-      // 날짜 문자열이 ISO 형식인지 확인
-      const dateStr = event.event_Date.includes('T') 
-        ? event.event_Date 
-        : `${event.event_Date}T00:00:00`;
-      
-      const eventDate = new Date(dateStr);
-      if (isNaN(eventDate.getTime())) {
-        console.error('Invalid date:', event.event_Date);
-        return false;
-      }
-      
-      const eventYear = eventDate.getFullYear().toString();
-      const matches = eventYear === selectedYear;
-      console.log(`Event ${event.event_Name}: ${event.event_Date} -> ${eventYear}, matches ${selectedYear}: ${matches}`);
-      return matches;
-    } catch (error) {
-      console.error('Error parsing date:', event.event_Date, error);
-      return false;
-    }
+    if (!event.event_Year) return false;
+    return event.event_Year.toString() === selectedYear;
   });
 
   // 사용 가능한 년도 목록 생성
   const availableYears = Array.from(
     new Set(
       events
-        .filter(event => event.event_Date)
-        .map(event => {
-          try {
-            const dateStr = event.event_Date.includes('T') 
-              ? event.event_Date 
-              : `${event.event_Date}T00:00:00`;
-            const year = new Date(dateStr).getFullYear();
-            return isNaN(year) ? null : year;
-          } catch (error) {
-            console.error('Error parsing date for year:', event.event_Date, error);
-            return null;
-          }
-        })
-        .filter((year): year is number => year !== null)
+        .filter(event => event.event_Year)
+        .map(event => event.event_Year)
     )
   ).sort((a, b) => b - a);
 
@@ -193,8 +162,9 @@ const ReceiptPage: React.FC = () => {
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     aria-label="년도 선택"
                   >
+                    <option value="">년도 선택</option>
                     {availableYears.map((year) => (
-                      <option key={year} value={year}>
+                      <option key={year} value={year.toString()}>
                         {year}년
                       </option>
                     ))}
@@ -211,6 +181,7 @@ const ReceiptPage: React.FC = () => {
                     onChange={(e) => setSelectedEvent(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     aria-label="이벤트 선택"
+                    disabled={!selectedYear}
                   >
                     <option value="">이벤트 선택</option>
                     {filteredEvents.map((event) => (

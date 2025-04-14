@@ -1,41 +1,41 @@
 import express from 'express';
-import pool from '../db';
+import pool from '../config/database';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 const router = express.Router();
 
-// Get all churches
+// 교회 목록 조회
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM churchdb');
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ChurchDB');
     res.json(rows);
   } catch (error) {
     console.error('Error fetching churches:', error);
-    res.status(500).json({ error: 'Failed to fetch churches' });
+    res.status(500).json({ error: '교회 목록을 불러오는데 실패했습니다.' });
   }
 });
 
-// Get church by ID
+// 교회 상세 조회
 router.get('/:id', async (req, res) => {
   try {
-    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM churchdb WHERE church_reg_ID = ?', [req.params.id]);
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ChurchDB WHERE church_reg_ID = ?', [req.params.id]);
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'Church not found' });
+      return res.status(404).json({ error: '교회를 찾을 수 없습니다.' });
     }
     res.json(rows[0]);
   } catch (error) {
     console.error('Error fetching church:', error);
-    res.status(500).json({ error: 'Failed to fetch church' });
+    res.status(500).json({ error: '교회 정보를 불러오는데 실패했습니다.' });
   }
 });
 
-// Create new church
+// 교회 생성
 router.post('/', async (req, res) => {
   try {
     const { church_reg_ID, church_sub_ID, church_Name, church_Location } = req.body;
     
     const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO churchdb (church_reg_ID, church_sub_ID, church_Name, church_Location) VALUES (?, ?, ?, ?)',
+      'INSERT INTO ChurchDB (church_reg_ID, church_sub_ID, church_Name, church_Location) VALUES (?, ?, ?, ?)',
       [church_reg_ID, church_sub_ID, church_Name, church_Location]
     );
 
@@ -49,55 +49,55 @@ router.post('/', async (req, res) => {
     res.status(201).json(newChurch);
   } catch (error) {
     console.error('Error creating church:', error);
-    res.status(500).json({ error: 'Failed to create church' });
+    res.status(500).json({ error: '교회 생성에 실패했습니다.' });
   }
 });
 
-// Update church
+// 교회 수정
 router.put('/:id', async (req, res) => {
   try {
     const { church_sub_ID, church_Name, church_Location } = req.body;
     
     const [result] = await pool.query<ResultSetHeader>(
-      'UPDATE churchdb SET church_sub_ID = ?, church_Name = ?, church_Location = ? WHERE church_reg_ID = ?',
+      'UPDATE ChurchDB SET church_sub_ID = ?, church_Name = ?, church_Location = ? WHERE church_reg_ID = ?',
       [church_sub_ID, church_Name, church_Location, req.params.id]
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Church not found' });
+      return res.status(404).json({ error: '교회를 찾을 수 없습니다.' });
     }
 
-    res.json({ message: 'Church updated successfully' });
+    res.json({ message: '교회가 성공적으로 수정되었습니다.' });
   } catch (error) {
     console.error('Error updating church:', error);
-    res.status(500).json({ error: 'Failed to update church' });
+    res.status(500).json({ error: '교회 수정에 실패했습니다.' });
   }
 });
 
-// Delete church
+// 교회 삭제
 router.delete('/:id', async (req, res) => {
   try {
-    const [result] = await pool.query<ResultSetHeader>('DELETE FROM churchdb WHERE church_reg_ID = ?', [req.params.id]);
+    const [result] = await pool.query<ResultSetHeader>('DELETE FROM ChurchDB WHERE church_reg_ID = ?', [req.params.id]);
     
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Church not found' });
+      return res.status(404).json({ error: '교회를 찾을 수 없습니다.' });
     }
 
-    res.json({ message: 'Church deleted successfully' });
+    res.json({ message: '교회가 성공적으로 삭제되었습니다.' });
   } catch (error) {
     console.error('Error deleting church:', error);
-    res.status(500).json({ error: 'Failed to delete church' });
+    res.status(500).json({ error: '교회 삭제에 실패했습니다.' });
   }
 });
 
-// Search church by phone
+// 전화번호로 교회 검색
 router.get('/phone/:phone', async (req, res) => {
   try {
-    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM churchdb WHERE church_Phone = ?', [req.params.phone]);
+    const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ChurchDB WHERE church_Phone = ?', [req.params.phone]);
     res.json(rows);
   } catch (error) {
     console.error('Error fetching church by phone:', error);
-    res.status(500).json({ error: 'Failed to search church' });
+    res.status(500).json({ error: '교회 검색에 실패했습니다.' });
   }
 });
 

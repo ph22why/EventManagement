@@ -22,6 +22,11 @@ export const eventApi = {
     return axios.get<Event[]>(`${API_BASE_URL}/api/events`);
   },
 
+  // 샘플 이벤트 조회
+  getSampleEvents: () => {
+    return axios.get<Event[]>(`${API_BASE_URL}/api/events/sampleEvents`);
+  },
+
   // 특정 년도의 이벤트 조회
   getEventsByYear: (year: number) => {
     return axios.get<Event[]>(`${API_BASE_URL}/api/events/year/${year}`);

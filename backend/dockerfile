@@ -9,11 +9,6 @@ RUN npm install
 
 COPY . .
 
-# TypeScript 빌드
-RUN npm run build
-
 EXPOSE 5000
 
-# 소스 파일을 직접 실행
-
-CMD ["node", "dist/app.js"]
+CMD ["npm", "start"]
