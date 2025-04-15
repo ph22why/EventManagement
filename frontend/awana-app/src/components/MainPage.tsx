@@ -6,11 +6,18 @@ import backgroundImage from '../assets/gradient-background.png';
 interface Event {
   event_ID: number;
   event_Name: string;
-  event_Location: string;
-  event_Year: number;
-  event_Date: Date;
-  event_Open_Available: boolean;
+  event_Description: string;
+  event_Period: string;
+  event_Region: string;
   event_Place: string;
+  event_Participants: string;
+  event_Open_Available: boolean;
+  event_Date: string;
+  isComingSoon?: boolean;
+}
+
+interface ApiResponse {
+  data: Event[];
 }
 
 const allEvents = [
@@ -36,24 +43,82 @@ const allEvents = [
 const MainPage: React.FC = () => {
   const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const response = await eventApi.getAllEvents();
-        setEvents(response.data);
-      } catch (err) {
-        setError('이벤트 목록을 불러오는데 실패했습니다.');
-        console.error('Error fetching events:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchEvents();
   }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const response = await eventApi.getAllEvents() as ApiResponse;
+      setEvents(response.data);
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Error fetching events:', err);
+      setError('이벤트 목록을 불러오는데 실패했습니다.');
+      setIsLoading(false);
+    }
+  };
+
+  // 월별로 이벤트 정렬
+  const monthOrder: { [key: string]: number } = {
+    '1월': 1, '2월': 2, '3월': 3, '4월': 4, '5월': 5, '6월': 6,
+    '7월': 7, '8월': 8, '9월': 9, '10월': 10, '11월': 11, '12월': 12,
+    '미정': 13
+  };
+
+  const sortedEvents = [...events].sort((a, b) => {
+    return (monthOrder[a.event_Period] || 13) - (monthOrder[b.event_Period] || 13);
+  });
+
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return '미정';
+    try {
+      return new Date(dateString).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (err) {
+      return '미정';
+    }
+  };
+
+  const processEvents = (events: Event[]) => {
+    // 이벤트 이름별로 그룹화
+    const eventsByName = new Map<string, Event[]>();
+    
+    events.forEach(event => {
+      if (!eventsByName.has(event.event_Name)) {
+        eventsByName.set(event.event_Name, []);
+      }
+      eventsByName.get(event.event_Name)?.push(event);
+    });
+
+    // 각 이벤트 그룹에서 가장 최신 이벤트만 선택
+    const latestEvents = Array.from(eventsByName.values()).map(eventGroup => {
+      const sortedGroup = eventGroup.sort((a, b) => {
+        const dateA = new Date(a.event_Date).getTime();
+        const dateB = new Date(b.event_Date).getTime();
+        return dateB - dateA;
+      });
+      return sortedGroup[0];
+    });
+
+    // 이벤트 날짜가 지났는지 확인하고 Coming Soon 상태 결정
+    return latestEvents.map(event => {
+      const eventDate = new Date(event.event_Date);
+      const today = new Date();
+      
+      if (eventDate < today) {
+        return { ...event, isComingSoon: false };
+      }
+      
+      return { ...event, isComingSoon: true };
+    }).sort((a, b) => new Date(a.event_Date).getTime() - new Date(b.event_Date).getTime());
+  };
 
   const handleEventClick = (eventId: number) => {
     navigate(`/receipt/${eventId}`);
@@ -80,15 +145,7 @@ const MainPage: React.FC = () => {
     );
   }
 
-  const registeredEvents = events.map(event => event.event_Name);
-  const allEventsWithStatus = allEvents.map(event => {
-    const isRegistered = registeredEvents.includes(event.name);
-    return {
-      ...event,
-      isRegistered,
-      month: getRandomMonth()
-    };
-  });
+  const latestEvents = processEvents(events).filter(event => event.event_Open_Available);
 
   return (
     <div className="min-h-screen relative">
@@ -132,8 +189,8 @@ const MainPage: React.FC = () => {
                 </div>
 
                 {/* 이벤트 목록 */}
-                {allEventsWithStatus.map((event, index) => {
-                  const registeredEvent = events.find(e => e.event_Name === event.name);
+                {latestEvents.map((event, index) => {
+                  const registeredEvent = events.find(e => e.event_Name === event.event_Name);
                   
                   return (
                     <div
@@ -146,7 +203,7 @@ const MainPage: React.FC = () => {
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
-                            <h2 className="text-xl font-semibold text-gray-900">{event.name}</h2>
+                            <h2 className="text-xl font-semibold text-gray-900">{event.event_Name}</h2>
                             {registeredEvent ? (
                               <span className={`px-3 py-1 rounded-full text-xs font-medium
                                 ${registeredEvent.event_Open_Available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -154,12 +211,12 @@ const MainPage: React.FC = () => {
                               </span>
                             ) : (
                               <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                Coming soon in {event.month}
+                                Coming soon in {getRandomMonth()}
                               </span>
                             )}
                           </div>
                           
-                          <p className="text-gray-600 mb-3">{event.description}</p>
+                          <p className="text-gray-600 mb-3">{event.event_Description}</p>
                           
                           {registeredEvent && (
                             <div className="flex items-center space-x-6 text-gray-600">
@@ -175,7 +232,7 @@ const MainPage: React.FC = () => {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
-                                <span>{registeredEvent.event_Location}</span>
+                                <span>{registeredEvent.event_Region}</span>
                               </div>
                             </div>
                           )}
