@@ -9,18 +9,18 @@ import axios from 'axios';
 const { Option } = Select;
 
 interface SampleEvent {
-  event_ID: number;
-  event_Name: string;
-  event_Location: string;
-  event_Year: number;
-  event_Start_Date: string;
-  event_End_Date: string;
-  event_Registration_Start_Date: string;
-  event_Registration_End_Date: string;
-  event_Open_Available: string;
-  event_Place: string;
-  event_Month: number;
-  event_Description: string;
+  sampleEvent_ID: number;
+  sampleEvent_Name: string;
+  sampleEvent_Location: string;
+  sampleEvent_Year: string;
+  sampleEvent_Start_Date: string | null;
+  sampleEvent_End_Date: string | null;
+  sampleEvent_Registration_Start_Date: string | null;
+  sampleEvent_Registration_End_Date: string | null;
+  sampleEvent_Open_Available: string;
+  sampleEvent_Place: string;
+  sampleEvent_Month: string;
+  sampleEvent_Description: string | null;
 }
 
 interface EventFormData {
@@ -60,14 +60,14 @@ const EventCreatePage: React.FC = () => {
   };
 
   const handleEventNameSelect = (eventId: number) => {
-    const selectedEvent = sampleEvents.find(event => event.event_ID === eventId);
+    const selectedEvent = sampleEvents.find(event => event.sampleEvent_ID === eventId);
     if (selectedEvent) {
       const currentYear = new Date().getFullYear();
       form.setFieldsValue({
-        event_Name: `${selectedEvent.event_Name} ${currentYear}`,
-        event_Place: selectedEvent.event_Place,
-        event_Location: selectedEvent.event_Location,
-        event_Open_Available: selectedEvent.event_Open_Available
+        event_Name: `${selectedEvent.sampleEvent_Name} ${currentYear}`,
+        event_Place: selectedEvent.sampleEvent_Place,
+        event_Location: selectedEvent.sampleEvent_Location,
+        event_Open_Available: selectedEvent.sampleEvent_Open_Available
       });
     }
   };
@@ -132,8 +132,8 @@ const EventCreatePage: React.FC = () => {
                 allowClear
               >
                 {sampleEvents.map(event => (
-                  <Option key={`event-${event.event_ID}`} value={event.event_ID}>
-                    {event.event_Name}
+                  <Option key={`event-${event.sampleEvent_ID}`} value={event.sampleEvent_ID}>
+                    {event.sampleEvent_Name}
                   </Option>
                 ))}
               </Select>
