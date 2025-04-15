@@ -27,51 +27,55 @@ AWANA 이벤트 관리 시스템입니다.
 
 ## 개발 환경 설정
 
-### 로컬 개발 환경
+### 공통 설정 (Docker MySQL)
+1. MySQL 컨테이너 실행:
+```bash
+# MySQL 컨테이너만 실행
+docker compose up -d mysql
 
-1. 프론트엔드 설정:
+# MySQL 상태 확인
+docker compose ps mysql
+```
+
+2. MySQL 환경 변수 설정:
+```bash
+# .env 파일 생성 (backend/.env)
+DB_HOST=localhost
+DB_PORT=3307
+DB_USER=root
+DB_PASSWORD=root
+DB_NAME=awana_db
+```
+
+### 프론트엔드 개발
 ```bash
 cd frontend/awana-app
 npm install
 npm start
 ```
 
-2. 백엔드 설정:
+### 백엔드 개발
 ```bash
 cd backend
 npm install
 npm run dev
 ```
 
-3. MySQL 설정 (로컬):
-- 포트: 3306
-- 사용자: root
-- 비밀번호: root
-- 데이터베이스: awana_db
+### 포트 설정
+- 프론트엔드: http://localhost:3000
+- 백엔드: http://localhost:5000
+- MySQL: localhost:3307 (Docker 컨테이너)
 
-### 도커 환경
-
-1. Docker Compose로 실행:
+### 데이터베이스 연결 확인
 ```bash
-docker compose up -d --build
+# MySQL 컨테이너 접속
+docker compose exec mysql mysql -u root -proot
+
+# 데이터베이스 확인
+SHOW DATABASES;
+USE awana_db;
+SHOW TABLES;
 ```
-
-2. 환경 변수 설정:
-```bash
-# .env 파일 생성
-# 로컬 환경
-DB_HOST=localhost
-DB_PORT=3306
-
-# 도커 환경
-DB_HOST=mysql
-DB_PORT=3306
-```
-
-3. 컨테이너 포트 매핑:
-- 프론트엔드: 3000
-- 백엔드: 5000
-- MySQL: 3307 (호스트) -> 3306 (컨테이너)
 
 ## 데이터베이스 테이블 구조
 
@@ -144,13 +148,26 @@ docker compose exec -T mysql mysql -u root -proot awana_db < backup.sql
 
 ## 문제 해결
 
-### 일반적인 문제
-1. MySQL 연결 오류
-   - 포트 확인 (로컬: 3306, 도커: 3307)
-   - 사용자 권한 확인
-   - 데이터베이스 존재 여부 확인
+### MySQL 연결 문제
+1. Docker MySQL 상태 확인:
+```bash
+docker compose ps mysql
+docker compose logs mysql
+```
 
-2. API 404 오류
+2. 연결 테스트:
+```bash
+# MySQL 클라이언트로 테스트
+mysql -h localhost -P 3307 -u root -proot
+```
+
+3. 일반적인 문제:
+- 포트 충돌: 3307 포트가 다른 프로세스에 의해 사용 중인지 확인
+- 컨테이너 상태: MySQL 컨테이너가 정상적으로 실행 중인지 확인
+- 방화벽 설정: 로컬 개발 환경의 방화벽이 3307 포트를 허용하는지 확인
+
+### 일반적인 문제
+1. API 404 오류
    - 라우트 순서 확인
    - 엔드포인트 URL 확인
    - 서버 재시작
